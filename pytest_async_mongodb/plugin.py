@@ -172,7 +172,7 @@ async def load_fixture(db, collection, path, file_format):
     if file_format == 'json':
         loader = functools.partial(json.load, object_hook=json_util.object_hook)
     elif file_format == 'yaml':
-        loader = yaml.load
+        loader = functools.partial(yaml.load, Loader=yaml.FullLoader)
     else:
         return
     try:
