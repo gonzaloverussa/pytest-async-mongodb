@@ -95,7 +95,7 @@ class AsyncCollection(AsyncClassMethod, mongomock.Collection):
 class AsyncDatabase(AsyncClassMethod, mongomock.Database):
 
     ASYNC_METHODS = [
-        'collection_names'
+        'list_collection_names'
     ]
 
     def get_collection(self, name, codec_options=None, read_preference=None,
@@ -147,7 +147,7 @@ async def async_mongodb_client(pytestconfig):
 
 
 async def clean_database(db):
-    collections = await db.collection_names(include_system_collections=False)
+    collections = await db.list_collection_names()
     for name in collections:
         db.drop_collection(name)
 

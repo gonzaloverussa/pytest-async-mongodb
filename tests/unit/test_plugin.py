@@ -4,7 +4,7 @@ from pytest_async_mongodb import plugin
 
 @pytest.mark.asyncio
 async def test_load(async_mongodb):
-    collection_names = await async_mongodb.collection_names()
+    collection_names = await async_mongodb.list_collection_names()
     assert 'players' in collection_names
     assert 'championships' in collection_names
     assert len(plugin._cache.keys()) == 2
