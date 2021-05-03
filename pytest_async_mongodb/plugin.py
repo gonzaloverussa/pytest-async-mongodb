@@ -98,11 +98,9 @@ class AsyncDatabase(AsyncClassMethod, mongomock.Database):
         'list_collection_names'
     ]
 
-    def get_collection(self, name, codec_options=None, read_preference=None,
-                       write_concern=None):
-        collection = self._collections.get(name)
-        if collection is None:
-            collection = self._collections[name] = AsyncCollection(self, name)
+    def get_collection(self, *args, **kwargs) -> AsyncCollection:
+        collection = super().get_collection(*args, **kwargs)
+        collection.__class__ = AsyncCollection
         return collection
 
 
@@ -116,11 +114,9 @@ class Session:
 
 class AsyncMockMongoClient(mongomock.MongoClient):
 
-    def get_database(self, name, codec_options=None, read_preference=None,
-                     write_concern=None):
-        db = self._databases.get(name)
-        if db is None:
-            db = self._databases[name] = AsyncDatabase(self, name)
+    def get_database(self, *args, **kwargs) -> AsyncDatabase:
+        db = super().get_database(*args, **kwargs)
+        db.__class__ = AsyncDatabase
         return db
 
     async def start_session(self, **kwargs):
