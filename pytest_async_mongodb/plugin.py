@@ -53,7 +53,6 @@ class AsyncClassMethod(object):
 class AsyncCollection(AsyncClassMethod, mongomock.Collection):
 
     ASYNC_METHODS = [
-        'find',
         'find_one',
         'find_one_and_delete',
         'find_one_and_replace',
@@ -76,21 +75,11 @@ class AsyncCollection(AsyncClassMethod, mongomock.Collection):
         'map_reduce',
     ]
 
-    async def find_one(self, filter=None, *args, **kwargs):
-        import collections
-        # Allow calling find_one with a non-dict argument that gets used as
-        # the id for the query.
-        if filter is None:
-            filter = {}
-        if not isinstance(filter, collections.Mapping):
-            filter = {'_id': filter}
-
-        cursor = await self.find(filter, *args, **kwargs)
+    async def find_one(self, *args, **kwargs):
         try:
-            return next(cursor)
+            return super().find_one(*args, **kwargs)
         except StopIteration:
             return None
-
 
 class AsyncDatabase(AsyncClassMethod, mongomock.Database):
 
