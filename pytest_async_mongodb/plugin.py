@@ -31,26 +31,20 @@ def pytest_addoption(parser):
         help='Try loading fixtures from this directory')
 
 
-def wrapper(func):
-    @functools.wraps(func)
+def async_decorator(func):
     async def wrapped(*args, **kwargs):
-        coro_func = asyncio.coroutine(func)
-        return await coro_func(*args, **kwargs)
+        return func(*args, **kwargs)
     return wrapped
 
-
-class AsyncClassMethod(object):
-
-    ASYNC_METHODS = []
-
-    def __getattribute__(self, name):
-        attr = super(AsyncClassMethod, self).__getattribute__(name)
-        if type(attr) == types.MethodType and name in self.ASYNC_METHODS:
-            attr = wrapper(attr)
-        return attr
+def wrapp_methods(cls):
+    for method_name in cls.ASYNC_METHODS:
+        method = getattr(cls, method_name)
+        setattr(cls, method_name, async_decorator(method))
+    return cls
 
 
-class AsyncCollection(AsyncClassMethod, mongomock.Collection):
+@wrapp_methods
+class AsyncCollection(mongomock.Collection):
 
     ASYNC_METHODS = [
         'find_one',
@@ -75,13 +69,8 @@ class AsyncCollection(AsyncClassMethod, mongomock.Collection):
         'map_reduce',
     ]
 
-    async def find_one(self, *args, **kwargs):
-        try:
-            return super().find_one(*args, **kwargs)
-        except StopIteration:
-            return None
-
-class AsyncDatabase(AsyncClassMethod, mongomock.Database):
+@wrapp_methods
+class AsyncDatabase(mongomock.Database):
 
     ASYNC_METHODS = [
         'list_collection_names'
