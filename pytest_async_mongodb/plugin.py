@@ -43,6 +43,18 @@ def wrapp_methods(cls):
     return cls
 
 
+class AsyncCursor(mongomock.collection.Cursor):
+    
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        try:
+            return next(self)
+        except StopIteration:
+            raise StopAsyncIteration()
+
+
 @wrapp_methods
 class AsyncCollection(mongomock.Collection):
 
@@ -68,6 +80,12 @@ class AsyncCollection(mongomock.Collection):
         'ensure_index',
         'map_reduce',
     ]
+
+    def find(self, *args, **kwargs) -> AsyncCursor:
+        cursor = super().find(*args, **kwargs)
+        cursor.__class__ = AsyncCursor
+        return cursor
+
 
 @wrapp_methods
 class AsyncDatabase(mongomock.Database):
