@@ -1,4 +1,11 @@
 [
+
+  {
+    "_id": {"$oid": "608b0151a20cf0c679939f59"},
+    "year": 2018,
+    "host": "Russia",
+    "winner": "France"
+  },
   {
     "_id": {"$oid": "55d2db06f4811f83a1f27be8"},
     "year": 2014,

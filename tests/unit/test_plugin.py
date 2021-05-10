@@ -1,5 +1,6 @@
 import pytest
 from pytest_async_mongodb import plugin
+from bson import ObjectId
 
 pytestmark = pytest.mark.asyncio
 
@@ -24,7 +25,7 @@ async def check_players(players):
 
 async def check_championships(championships):
     count = await championships.count_documents({})
-    assert count == 3
+    assert count == 4
     await check_keys_in_docs(championships, ['year', 'host', 'winner'])
 
 
@@ -36,12 +37,131 @@ async def check_keys_in_docs(collection, keys):
 
 
 async def test_insert(async_mongodb):
+    count_before = await async_mongodb.players.count_documents({})
     await async_mongodb.players.insert_one({
         'name': 'Bastian',
         'surname': 'Schweinsteiger',
         'position': 'midfield'
     })
-    count = await async_mongodb.players.count_documents({})
+    count_after = await async_mongodb.players.count_documents({})
     bastian = await async_mongodb.players.find_one({'name': 'Bastian'})
-    assert count == 3
+    assert count_after  == count_before + 1
     assert bastian.get('name') == 'Bastian'
+
+
+async def test_find_one(async_mongodb):
+    doc = await async_mongodb.championships.find_one()
+    assert doc == {
+        "_id": ObjectId("608b0151a20cf0c679939f59"),
+        "year": 2018,
+        "host": "Russia",
+        "winner": "France"
+    }
+
+
+async def test_find(async_mongodb):
+    docs = async_mongodb.championships.find()
+    docs_list = []
+    async for doc in docs:
+        docs_list.append(doc)
+    assert docs_list == [
+        {
+            "_id": ObjectId("608b0151a20cf0c679939f59"),
+            "year": 2018,
+            "host": "Russia",
+            "winner": "France"
+        },
+        {
+            "_id": ObjectId("55d2db06f4811f83a1f27be8"),
+            "year": 2014,
+            "host": "Brazil",
+            "winner": "Germany"
+        },
+        {
+            "_id": ObjectId("55d2db19f4811f83a1f27be9"),
+            "year": 2010,
+            "host": "South Africa",
+            "winner": "Spain"
+        },
+        {
+            "_id": ObjectId("55d2db30f4811f83a1f27bea"),
+            "year": 2006,
+            "host": "Germany",
+            "winner": "France"
+        }
+    ]
+    
+
+async def test_find_with_filter(async_mongodb):
+    docs = async_mongodb.championships.find({"winner": "France"})
+    docs_list = []
+    async for doc in docs:
+        docs_list.append(doc)
+    assert docs_list == [
+        {
+            "_id": ObjectId("608b0151a20cf0c679939f59"),
+            "year": 2018,
+            "host": "Russia",
+            "winner": "France"
+        },
+        {
+            "_id": ObjectId("55d2db30f4811f83a1f27bea"),
+            "year": 2006,
+            "host": "Germany",
+            "winner": "France"
+        }
+    ]
+
+
+async def test_find_sorted(async_mongodb):
+    docs = async_mongodb.championships.find(sort=[("year", 1)])
+    docs_list = []
+    async for doc in docs:
+        docs_list.append(doc)
+    assert docs_list == [
+        {
+            "_id": ObjectId("55d2db30f4811f83a1f27bea"),
+            "year": 2006,
+            "host": "Germany",
+            "winner": "France"
+        },
+        {
+            "_id": ObjectId("55d2db19f4811f83a1f27be9"),
+            "year": 2010,
+            "host": "South Africa",
+            "winner": "Spain"
+        },
+        {
+            "_id": ObjectId("55d2db06f4811f83a1f27be8"),
+            "year": 2014,
+            "host": "Brazil",
+            "winner": "Germany"
+        },
+        {
+            "_id": ObjectId("608b0151a20cf0c679939f59"),
+            "year": 2018,
+            "host": "Russia",
+            "winner": "France"
+        }
+    ]
+
+
+async def test_find_sorted_with_filter(async_mongodb):
+    docs = async_mongodb.championships.find(filter={"winner": "France"}, sort=[("year", 1)])
+    docs_list = []
+    async for doc in docs:
+        docs_list.append(doc)
+    assert docs_list == [
+        {
+            "_id": ObjectId("55d2db30f4811f83a1f27bea"),
+            "year": 2006,
+            "host": "Germany",
+            "winner": "France"
+        },
+        {
+            "_id": ObjectId("608b0151a20cf0c679939f59"),
+            "year": 2018,
+            "host": "Russia",
+            "winner": "France"
+        }
+    ]
