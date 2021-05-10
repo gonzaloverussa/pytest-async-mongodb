@@ -1,14 +1,14 @@
-import pytest
-from pytest_async_mongodb import plugin
 from bson import ObjectId
+from pytest_async_mongodb import plugin
+import pytest
 
 pytestmark = pytest.mark.asyncio
 
 
 async def test_load(async_mongodb):
     collection_names = await async_mongodb.list_collection_names()
-    assert 'players' in collection_names
-    assert 'championships' in collection_names
+    assert "players" in collection_names
+    assert "championships" in collection_names
     assert len(plugin._cache.keys()) == 2
     await check_players(async_mongodb.players)
     await check_championships(async_mongodb.championships)
@@ -17,16 +17,16 @@ async def test_load(async_mongodb):
 async def check_players(players):
     count = await players.count_documents({})
     assert count == 2
-    await check_keys_in_docs(players, ['name', 'surname', 'position'])
-    manuel = await players.find_one({'name': 'Manuel'})
-    assert manuel['surname'] == 'Neuer'
-    assert manuel['position'] == 'keeper'
+    await check_keys_in_docs(players, ["name", "surname", "position"])
+    manuel = await players.find_one({"name": "Manuel"})
+    assert manuel["surname"] == "Neuer"
+    assert manuel["position"] == "keeper"
 
 
 async def check_championships(championships):
     count = await championships.count_documents({})
     assert count == 4
-    await check_keys_in_docs(championships, ['year', 'host', 'winner'])
+    await check_keys_in_docs(championships, ["year", "host", "winner"])
 
 
 async def check_keys_in_docs(collection, keys):
@@ -38,15 +38,13 @@ async def check_keys_in_docs(collection, keys):
 
 async def test_insert(async_mongodb):
     count_before = await async_mongodb.players.count_documents({})
-    await async_mongodb.players.insert_one({
-        'name': 'Bastian',
-        'surname': 'Schweinsteiger',
-        'position': 'midfield'
-    })
+    await async_mongodb.players.insert_one(
+        {"name": "Bastian", "surname": "Schweinsteiger", "position": "midfield"}
+    )
     count_after = await async_mongodb.players.count_documents({})
-    bastian = await async_mongodb.players.find_one({'name': 'Bastian'})
-    assert count_after  == count_before + 1
-    assert bastian.get('name') == 'Bastian'
+    bastian = await async_mongodb.players.find_one({"name": "Bastian"})
+    assert count_after == count_before + 1
+    assert bastian.get("name") == "Bastian"
 
 
 async def test_find_one(async_mongodb):
@@ -55,7 +53,7 @@ async def test_find_one(async_mongodb):
         "_id": ObjectId("608b0151a20cf0c679939f59"),
         "year": 2018,
         "host": "Russia",
-        "winner": "France"
+        "winner": "France",
     }
 
 
@@ -69,28 +67,28 @@ async def test_find(async_mongodb):
             "_id": ObjectId("608b0151a20cf0c679939f59"),
             "year": 2018,
             "host": "Russia",
-            "winner": "France"
+            "winner": "France",
         },
         {
             "_id": ObjectId("55d2db06f4811f83a1f27be8"),
             "year": 2014,
             "host": "Brazil",
-            "winner": "Germany"
+            "winner": "Germany",
         },
         {
             "_id": ObjectId("55d2db19f4811f83a1f27be9"),
             "year": 2010,
             "host": "South Africa",
-            "winner": "Spain"
+            "winner": "Spain",
         },
         {
             "_id": ObjectId("55d2db30f4811f83a1f27bea"),
             "year": 2006,
             "host": "Germany",
-            "winner": "France"
-        }
+            "winner": "France",
+        },
     ]
-    
+
 
 async def test_find_with_filter(async_mongodb):
     docs = async_mongodb.championships.find({"winner": "France"})
@@ -102,14 +100,14 @@ async def test_find_with_filter(async_mongodb):
             "_id": ObjectId("608b0151a20cf0c679939f59"),
             "year": 2018,
             "host": "Russia",
-            "winner": "France"
+            "winner": "France",
         },
         {
             "_id": ObjectId("55d2db30f4811f83a1f27bea"),
             "year": 2006,
             "host": "Germany",
-            "winner": "France"
-        }
+            "winner": "France",
+        },
     ]
 
 
@@ -123,31 +121,33 @@ async def test_find_sorted(async_mongodb):
             "_id": ObjectId("55d2db30f4811f83a1f27bea"),
             "year": 2006,
             "host": "Germany",
-            "winner": "France"
+            "winner": "France",
         },
         {
             "_id": ObjectId("55d2db19f4811f83a1f27be9"),
             "year": 2010,
             "host": "South Africa",
-            "winner": "Spain"
+            "winner": "Spain",
         },
         {
             "_id": ObjectId("55d2db06f4811f83a1f27be8"),
             "year": 2014,
             "host": "Brazil",
-            "winner": "Germany"
+            "winner": "Germany",
         },
         {
             "_id": ObjectId("608b0151a20cf0c679939f59"),
             "year": 2018,
             "host": "Russia",
-            "winner": "France"
-        }
+            "winner": "France",
+        },
     ]
 
 
 async def test_find_sorted_with_filter(async_mongodb):
-    docs = async_mongodb.championships.find(filter={"winner": "France"}, sort=[("year", 1)])
+    docs = async_mongodb.championships.find(
+        filter={"winner": "France"}, sort=[("year", 1)]
+    )
     docs_list = []
     async for doc in docs:
         docs_list.append(doc)
@@ -156,12 +156,12 @@ async def test_find_sorted_with_filter(async_mongodb):
             "_id": ObjectId("55d2db30f4811f83a1f27bea"),
             "year": 2006,
             "host": "Germany",
-            "winner": "France"
+            "winner": "France",
         },
         {
             "_id": ObjectId("608b0151a20cf0c679939f59"),
             "year": 2018,
             "host": "Russia",
-            "winner": "France"
-        }
+            "winner": "France",
+        },
     ]
