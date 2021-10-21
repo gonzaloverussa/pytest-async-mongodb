@@ -2,6 +2,9 @@
 # Created by https://www.toptal.com/developers/gitignore/api/python,linux,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,linux,visualstudiocode
 
+### vscode ###
+.vscode
+
 ### Linux ###
 *~
 
