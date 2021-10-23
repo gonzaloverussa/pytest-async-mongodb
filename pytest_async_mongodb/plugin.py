@@ -54,7 +54,7 @@ class AsyncCursor(mongomock.collection.Cursor):
         except StopIteration:
             raise StopAsyncIteration()
 
-    async def to_list(self, length):
+    async def to_list(self, length=None):
         the_list = []
         try:
             while length is None or len(the_list) < length:
@@ -87,6 +87,7 @@ class AsyncCollection(mongomock.Collection):
         "create_index",
         "ensure_index",
         "map_reduce",
+        "bulk_write",
     ]
 
     def find(self, *args, **kwargs) -> AsyncCursor:
