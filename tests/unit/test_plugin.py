@@ -1,6 +1,7 @@
 from bson import ObjectId
 from pytest_async_mongodb import plugin
 import pytest
+from pymongo import InsertOne
 
 pytestmark = pytest.mark.asyncio
 
@@ -165,3 +166,18 @@ async def test_find_sorted_with_filter(async_mongodb):
             "winner": "France",
         },
     ]
+
+
+async def test_bulk_write_and_to_list(async_mongodb):
+    await async_mongodb.championships.bulk_write(
+        [
+            InsertOne({"_id": 1, "a": 22}),
+            InsertOne({"_id": 2, "a": 22}),
+            InsertOne({"_id": 3, "a": 33}),
+        ]
+    )
+    result = async_mongodb.championships.find({"a": 22})
+    docs = await result.to_list()
+    assert len(docs) == 2
+    assert docs[0]["a"] == 22
+    assert docs[1]["a"] == 22

@@ -54,7 +54,26 @@ class AsyncCursor(mongomock.collection.Cursor):
         except StopIteration:
             raise StopAsyncIteration()
 
-    async def to_list(self, length):
+    async def to_list(self, length=None):
+        the_list = []
+        try:
+            while length is None or len(the_list) < length:
+                the_list.append(next(self))
+        finally:
+            return the_list
+
+
+class AsyncCommandCursor(mongomock.command_cursor.CommandCursor):
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        try:
+            return next(self)
+        except StopIteration:
+            raise StopAsyncIteration()
+
+    async def to_list(self, length=None):
         the_list = []
         try:
             while length is None or len(the_list) < length:
@@ -87,11 +106,17 @@ class AsyncCollection(mongomock.Collection):
         "create_index",
         "ensure_index",
         "map_reduce",
+        "bulk_write",
     ]
 
     def find(self, *args, **kwargs) -> AsyncCursor:
         cursor = super().find(*args, **kwargs)
         cursor.__class__ = AsyncCursor
+        return cursor
+
+    def aggregate(self, *args, **kwargs) -> AsyncCommandCursor:
+        cursor = super().aggregate(*args, **kwargs)
+        cursor.__class__ = AsyncCommandCursor
         return cursor
 
 
