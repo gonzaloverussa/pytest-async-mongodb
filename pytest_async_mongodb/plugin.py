@@ -7,8 +7,17 @@ import codecs
 import mongomock
 import pytest
 import yaml
+from packaging import version
 
 _cache = {}
+
+try:
+    from pymongo import version as pymongo_version
+
+    PYMONGO_VERSION = version.parse(pymongo_version)
+except ImportError:
+    # Default Pymongo version if not present.
+    PYMONGO_VERSION = version.parse("4.0")
 
 
 def pytest_addoption(parser):
@@ -86,28 +95,31 @@ class AsyncCommandCursor(mongomock.command_cursor.CommandCursor):
 class AsyncCollection(mongomock.Collection):
 
     ASYNC_METHODS = [
+        "bulk_write",
+        "count_documents",
+        "create_index",
+        "delete_one",
+        "delete_many",
+        "drop",
+        "estimated_document_count",
         "find_one",
         "find_one_and_delete",
         "find_one_and_replace",
         "find_one_and_update",
-        "find_and_modify",
-        "save",
-        "delete_one",
-        "delete_many",
-        "count",
         "insert_one",
         "insert_many",
+        "replace_one",
         "update_one",
         "update_many",
-        "replace_one",
-        "count_documents",
-        "estimated_document_count",
-        "drop",
-        "create_index",
-        "ensure_index",
-        "map_reduce",
-        "bulk_write",
     ]
+    if PYMONGO_VERSION < version.parse("4.0"):
+        ASYNC_METHODS += [
+            "count",
+            "ensure_index",
+            "find_and_modify",
+            "map_reduce",
+            "save",
+        ]
 
     def find(self, *args, **kwargs) -> AsyncCursor:
         cursor = super().find(*args, **kwargs)
