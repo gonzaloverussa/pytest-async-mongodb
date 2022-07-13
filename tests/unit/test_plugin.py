@@ -185,3 +185,14 @@ async def test_bulk_write_and_to_list(async_mongodb):
 
 async def test_estimated_document_count(async_mongodb):
     assert await async_mongodb.championships.estimated_document_count() == 4
+
+
+async def test_find_one_and_update(async_mongodb):
+    await async_mongodb.championships.find_one_and_update(
+        filter={"_id": ObjectId("608b0151a20cf0c679939f59")},
+        update={"$set": {"year": 2022}},
+    )
+    doc = await async_mongodb.championships.find_one(
+        {"_id": ObjectId("608b0151a20cf0c679939f59")}
+    )
+    assert doc["year"] == 2022
