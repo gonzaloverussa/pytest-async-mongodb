@@ -181,3 +181,7 @@ async def test_bulk_write_and_to_list(async_mongodb):
     assert len(docs) == 2
     assert docs[0]["a"] == 22
     assert docs[1]["a"] == 22
+
+
+async def test_estimated_document_count(async_mongodb):
+    assert await async_mongodb.championships.estimated_document_count() == 4
