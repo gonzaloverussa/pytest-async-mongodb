@@ -7,18 +7,9 @@ import codecs
 import mongomock
 import pytest
 import yaml
-from packaging import version
 import pytest_asyncio
 
 _cache = {}
-
-try:
-    from pymongo import version as pymongo_version
-
-    PYMONGO_VERSION = version.parse(pymongo_version)
-except ImportError:
-    # Default Pymongo version if not present.
-    PYMONGO_VERSION = version.parse("4.0")
 
 
 def pytest_addoption(parser):
