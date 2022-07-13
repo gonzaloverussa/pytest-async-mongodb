@@ -5,7 +5,6 @@ import functools
 import json
 import codecs
 import mongomock
-import pytest
 import yaml
 import pytest_asyncio
 
