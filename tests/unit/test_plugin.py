@@ -1,7 +1,7 @@
 from bson import ObjectId
 from pytest_async_mongodb import plugin
 import pytest
-from pymongo import InsertOne
+from pymongo import InsertOne, DESCENDING
 
 pytestmark = pytest.mark.asyncio
 
@@ -196,3 +196,25 @@ async def test_find_one_and_update(async_mongodb):
         {"_id": ObjectId("608b0151a20cf0c679939f59")}
     )
     assert doc["year"] == 2022
+
+
+async def test_chained_operations(async_mongodb):
+    docs = (
+        await async_mongodb.championships.find()
+        .sort("year", DESCENDING)
+        .skip(1)
+        .limit(2)
+        .to_list()
+    )
+    assert len(docs) == 2
+    assert docs[0]["year"] == 2014
+    assert docs[1]["year"] == 2010
+    docs = (
+        await async_mongodb.championships.find()
+        .sort("year", DESCENDING)
+        .skip(3)
+        .limit(2)
+        .to_list()
+    )
+    assert len(docs) == 1
+    assert docs[0]["year"] == 2006
