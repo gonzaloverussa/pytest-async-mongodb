@@ -5,8 +5,8 @@ import functools
 import json
 import codecs
 import mongomock
-import pytest
 import yaml
+import pytest_asyncio
 
 _cache = {}
 
@@ -37,11 +37,13 @@ def async_decorator(func):
     return wrapped
 
 
-def wrapp_methods(cls):
-    for method_name in cls.ASYNC_METHODS:
-        method = getattr(cls, method_name)
-        setattr(cls, method_name, async_decorator(method))
-    return cls
+def async_wrap(obj):
+    # wrap all the public interfaces except the one has been re-defined in obj
+    for item in dir(obj._base_sync_obj):
+        if not item.startswith("_"):
+            member = getattr(obj._base_sync_obj, item)
+            if callable(member) and item not in dir(obj):
+                setattr(obj, item, async_decorator(member))
 
 
 class AsyncCursor(mongomock.collection.Cursor):
@@ -54,48 +56,64 @@ class AsyncCursor(mongomock.collection.Cursor):
         except StopIteration:
             raise StopAsyncIteration()
 
+    async def to_list(self, length=None):
+        the_list = []
+        try:
+            while length is None or len(the_list) < length:
+                the_list.append(next(self))
+        finally:
+            return the_list
 
-@wrapp_methods
-class AsyncCollection(mongomock.Collection):
 
-    ASYNC_METHODS = [
-        "find_one",
-        "find_one_and_delete",
-        "find_one_and_replace",
-        "find_one_and_update",
-        "find_and_modify",
-        "save",
-        "delete_one",
-        "delete_many",
-        "count",
-        "insert_one",
-        "insert_many",
-        "update_one",
-        "update_many",
-        "replace_one",
-        "count_documents",
-        "estimated_document_count",
-        "drop",
-        "create_index",
-        "ensure_index",
-        "map_reduce",
-    ]
+class AsyncCommandCursor(mongomock.command_cursor.CommandCursor):
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        try:
+            return next(self)
+        except StopIteration:
+            raise StopAsyncIteration()
+
+    async def to_list(self, length=None):
+        the_list = []
+        try:
+            while length is None or len(the_list) < length:
+                the_list.append(next(self))
+        finally:
+            return the_list
+
+
+class AsyncCollection:
+    def __init__(self, mongomock_collection):
+        self._base_sync_obj = mongomock_collection
+        async_wrap(self)
 
     def find(self, *args, **kwargs) -> AsyncCursor:
-        cursor = super().find(*args, **kwargs)
+        cursor = self._base_sync_obj.find(*args, **kwargs)
         cursor.__class__ = AsyncCursor
         return cursor
 
+    def aggregate(self, *args, **kwargs) -> AsyncCommandCursor:
+        cursor = self._base_sync_obj.aggregate(*args, **kwargs)
+        cursor.__class__ = AsyncCommandCursor
+        return cursor
 
-@wrapp_methods
-class AsyncDatabase(mongomock.Database):
 
-    ASYNC_METHODS = ["list_collection_names"]
+class AsyncDatabase:
+    def __init__(self, mongomock_db):
+        self._base_sync_obj = mongomock_db
+        async_wrap(self)
+
+    def __getattr__(self, attr):
+        return self[attr]
+
+    def __getitem__(self, db_name):
+        return self.get_collection(db_name)
 
     def get_collection(self, *args, **kwargs) -> AsyncCollection:
-        collection = super().get_collection(*args, **kwargs)
-        collection.__class__ = AsyncCollection
-        return collection
+        collection = self._base_sync_obj.get_collection(*args, **kwargs)
+        return AsyncCollection(collection)
 
 
 class Session:
@@ -106,29 +124,38 @@ class Session:
         await asyncio.sleep(0)
 
 
-class AsyncMockMongoClient(mongomock.MongoClient):
+class AsyncMockMongoClient:
+    def __init__(self, mongomock_client):
+        self._base_sync_obj = mongomock_client
+        async_wrap(self)
+
+    def __getattr__(self, attr):
+        return self[attr]
+
+    def __getitem__(self, db_name):
+        return self.get_database(db_name)
+
     def get_database(self, *args, **kwargs) -> AsyncDatabase:
-        db = super().get_database(*args, **kwargs)
-        db.__class__ = AsyncDatabase
-        return db
+        db = self._base_sync_obj.get_database(*args, **kwargs)
+        return AsyncDatabase(db)
 
     async def start_session(self, **kwargs):
         await asyncio.sleep(0)
         return Session()
 
 
-@pytest.fixture(scope="function")
-async def async_mongodb(pytestconfig):
-    client = AsyncMockMongoClient()
+@pytest_asyncio.fixture(scope="function")
+async def async_mongodb(event_loop, pytestconfig):
+    client = AsyncMockMongoClient(mongomock.MongoClient())
     db = client["pytest"]
     await clean_database(db)
     await load_fixtures(db, pytestconfig)
     return db
 
 
-@pytest.fixture(scope="function")
-async def async_mongodb_client(pytestconfig):
-    client = AsyncMockMongoClient()
+@pytest_asyncio.fixture(scope="function")
+async def async_mongodb_client(event_loop, pytestconfig):
+    client = AsyncMockMongoClient(mongomock.MongoClient())
     db = client["pytest"]
     await clean_database(db)
     await load_fixtures(db, pytestconfig)
@@ -138,7 +165,7 @@ async def async_mongodb_client(pytestconfig):
 async def clean_database(db):
     collections = await db.list_collection_names()
     for name in collections:
-        db.drop_collection(name)
+        await db.drop_collection(name)
 
 
 async def load_fixtures(db, config):

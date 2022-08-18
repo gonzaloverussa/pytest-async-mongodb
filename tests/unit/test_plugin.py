@@ -1,6 +1,7 @@
 from bson import ObjectId
 from pytest_async_mongodb import plugin
 import pytest
+from pymongo import InsertOne, DESCENDING
 
 pytestmark = pytest.mark.asyncio
 
@@ -165,3 +166,55 @@ async def test_find_sorted_with_filter(async_mongodb):
             "winner": "France",
         },
     ]
+
+
+async def test_bulk_write_and_to_list(async_mongodb):
+    await async_mongodb.championships.bulk_write(
+        [
+            InsertOne({"_id": 1, "a": 22}),
+            InsertOne({"_id": 2, "a": 22}),
+            InsertOne({"_id": 3, "a": 33}),
+        ]
+    )
+    result = async_mongodb.championships.find({"a": 22})
+    docs = await result.to_list()
+    assert len(docs) == 2
+    assert docs[0]["a"] == 22
+    assert docs[1]["a"] == 22
+
+
+async def test_estimated_document_count(async_mongodb):
+    assert await async_mongodb.championships.estimated_document_count() == 4
+
+
+async def test_find_one_and_update(async_mongodb):
+    await async_mongodb.championships.find_one_and_update(
+        filter={"_id": ObjectId("608b0151a20cf0c679939f59")},
+        update={"$set": {"year": 2022}},
+    )
+    doc = await async_mongodb.championships.find_one(
+        {"_id": ObjectId("608b0151a20cf0c679939f59")}
+    )
+    assert doc["year"] == 2022
+
+
+async def test_chained_operations(async_mongodb):
+    docs = (
+        await async_mongodb.championships.find()
+        .sort("year", DESCENDING)
+        .skip(1)
+        .limit(2)
+        .to_list()
+    )
+    assert len(docs) == 2
+    assert docs[0]["year"] == 2014
+    assert docs[1]["year"] == 2010
+    docs = (
+        await async_mongodb.championships.find()
+        .sort("year", DESCENDING)
+        .skip(3)
+        .limit(2)
+        .to_list()
+    )
+    assert len(docs) == 1
+    assert docs[0]["year"] == 2006
